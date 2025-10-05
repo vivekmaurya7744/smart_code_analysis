@@ -1,0 +1,10 @@
+streamlit
+pandas
+pymongo
+google-generativeai
+plotly
+requests
+pyyaml
+graphviz
+packaging
+dataclasses
