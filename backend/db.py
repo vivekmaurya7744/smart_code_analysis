@@ -1,14 +1,23 @@
 from pymongo import MongoClient
+from dotenv import load_dotenv
 import hashlib
+import os
 
-# --- IMPORTANT ---
-# Make sure you have a MongoDB server running on this address.
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "smart_code_analysis"
+# --- Load environment variables ---
+load_dotenv()
 
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-users_collection = db["users"]
+# --- Read Mongo credentials from .env ---
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME")
+
+# --- Connect to MongoDB Atlas (Global) ---
+try:
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    users_collection = db["users"]
+    print("✅ Connected to MongoDB Atlas successfully.")
+except Exception as e:
+    print("❌ Failed to connect to MongoDB Atlas:", e)
 
 def hash_password(password):
     """Hashes the password using SHA256."""

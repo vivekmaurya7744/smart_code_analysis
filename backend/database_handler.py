@@ -1,12 +1,23 @@
 from pymongo import MongoClient
 from datetime import datetime
+from dotenv import load_dotenv
+import os
 
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME = "smart_code_analysis"
+# --- Load environment variables from .env ---
+load_dotenv()
 
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-files_collection = db["files"]
+# --- Read Mongo credentials securely ---
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME")
+
+# --- Connect to Global MongoDB Atlas ---
+try:
+    client = MongoClient(MONGO_URI)
+    db = client[DB_NAME]
+    files_collection = db["files"]
+    print("✅ Connected to MongoDB Atlas successfully.")
+except Exception as e:
+    print("❌ Failed to connect to MongoDB Atlas:", e)
 
 def save_file(username, filename, content):
     """Save uploaded file in MongoDB or update if already exists"""
@@ -15,7 +26,6 @@ def save_file(username, filename, content):
 
     existing = files_collection.find_one({"username": username, "filename": filename})
     if existing:
-        # Update existing file
         files_collection.update_one(
             {"_id": existing["_id"]},
             {"$set": {
@@ -26,7 +36,6 @@ def save_file(username, filename, content):
             }}
         )
     else:
-        # Insert new file
         files_collection.insert_one({
             "username": username,
             "filename": filename,

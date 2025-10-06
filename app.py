@@ -1,16 +1,17 @@
 import streamlit as st
 from backend.db import check_user, register_user
+import time
 
 st.set_page_config(page_title="Login - Smart Code Analysis", page_icon="🤖", layout="wide")
 
-# Session state variables ko initialize karna
+# Initialize session state
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 def show_auth_page():
-    """Login aur registration forms dikhata hai."""
+    """Login and registration forms."""
     st.title("🤖 Smart Code Analysis")
     st.write("")
 
@@ -29,10 +30,13 @@ def show_auth_page():
             submitted = st.form_submit_button("Login", use_container_width=True, type="primary")
 
             if submitted:
-                if check_user(username, password):
+                if not username or not password:
+                    st.warning("Please enter both username and password.")
+                elif check_user(username, password):
                     st.session_state["authenticated"] = True
                     st.session_state["username"] = username
                     st.success("Login successful!")
+                    time.sleep(0.8)
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
@@ -60,8 +64,7 @@ def show_auth_page():
 
 # --- Main App Logic ---
 if not st.session_state.get("authenticated", False):
-    # --- YEH CODE ADD KAREIN ---
-    # Login page par sidebar hide karne ke liye CSS
+    # Hide sidebar on login page
     st.markdown(
         """
         <style>
@@ -72,7 +75,6 @@ if not st.session_state.get("authenticated", False):
         """,
         unsafe_allow_html=True
     )
-    # --------------------------
     show_auth_page()
 else:
     st.switch_page("pages/1_Dashboard.py")
