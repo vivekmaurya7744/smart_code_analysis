@@ -10,3 +10,6 @@ packaging
 dataclasses
 radon
 python-dotenv
+fpdf2
+pylint
+mypy
