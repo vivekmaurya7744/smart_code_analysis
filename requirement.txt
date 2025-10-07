@@ -8,4 +8,5 @@ pyyaml
 graphviz
 packaging
 dataclasses
+radon
 python-dotenv
