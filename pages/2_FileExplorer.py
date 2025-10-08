@@ -4,7 +4,7 @@ import ast
 import re
 import pandas as pd
 import graphviz
-from dataclasses import dataclass, asdict # ### FIX: Import 'asdict' to convert classes to dictionaries
+from dataclasses import dataclass, asdict
 from typing import List, Set
 
 # Try to import radon, provide helpful error if it's not installed.
@@ -126,8 +126,8 @@ def calculate_quality_score(analysis: dict) -> int:
     mi = analysis.get('maintainability_index', 70)
     if mi < 50: score -= (50 - mi) * 0.5
     for issue in analysis.get("issues", []):
-        if issue['severity'] == "Danger": score -= 15 # ### FIX: Use dictionary access
-        elif issue['severity'] == "Warning": score -= 5 # ### FIX: Use dictionary access
+        if issue['severity'] == "Danger": score -= 15
+        elif issue['severity'] == "Warning": score -= 5
         else: score -= 1
     doc_cov = analysis.get('docstring_coverage', 100)
     if doc_cov < 80: score -= (80 - doc_cov) * 0.2
@@ -148,20 +148,19 @@ def analyze_code(content: str):
         if re.search(r'#\s*(TODO|FIXME)', line, re.I): analysis["issues"].append(CodeIssue(line_num, "TODO/FIXME comment found.", code=line.strip()))
         if re.search(r'\s+$', line): analysis["issues"].append(CodeIssue(line_num, "Trailing whitespace detected."))
     
-    analysis['issues'] = [asdict(i) for i in analysis['issues']] # ### FIX: Convert line-by-line issues to dicts
+    analysis['issues'] = [asdict(i) for i in analysis['issues']]
 
     try:
         tree = ast.parse(content)
         visitor = CodeAnalyzerVisitor(lines)
         visitor.visit(tree)
         
-        # ### FIX: Convert all custom class instances to dictionaries before adding to analysis ###
         analysis["functions"] = [asdict(f) for f in visitor.functions]
         analysis["classes"] = [asdict(c) for c in visitor.classes]
         analysis["imports"] = visitor.imports
         analysis["imported_names"] = visitor.imported_names
         analysis["used_names"] = visitor.used_names
-        analysis["issues"].extend([asdict(i) for i in visitor.issues]) # Add visitor issues as dicts
+        analysis["issues"].extend([asdict(i) for i in visitor.issues])
         
     except SyntaxError as e:
         st.error(f"Cannot parse file: Invalid Python syntax at line {e.lineno}. Details: {e.msg}")
@@ -170,7 +169,6 @@ def analyze_code(content: str):
     try:
         complexity_visitor = ComplexityVisitor.from_code(content)
         analysis["maintainability_index"] = mi_visit(content, multi=True)
-        # ### FIX: Update complexity in the new dictionary structure ###
         func_map = {f['name']: f for f in analysis["functions"]}
         for block in complexity_visitor.functions:
             if block.name in func_map and func_map[block.name]['lineno'] == block.lineno:
@@ -184,7 +182,7 @@ def analyze_code(content: str):
     analysis["loc"] = raw_stats.loc
     analysis["lloc"] = raw_stats.lloc
     total_funcs = len(analysis["functions"])
-    docstring_funcs = sum(1 for f in analysis["functions"] if f['has_docstring']) # ### FIX: Use dictionary access
+    docstring_funcs = sum(1 for f in analysis["functions"] if f['has_docstring'])
     analysis['docstring_coverage'] = (docstring_funcs / total_funcs * 100) if total_funcs else 100
     
     analysis['quality_score'] = calculate_quality_score(analysis)
@@ -207,11 +205,8 @@ else:
         selected_file = next((f for f in uploaded_files if f.name == selected_file_name), None)
 
         if selected_file:
-            try:
-                content = selected_file.getvalue().decode("utf-8")
-            except UnicodeDecodeError:
-                st.warning("Could not decode as UTF-8. Trying 'latin-1' as a fallback.")
-                content = selected_file.getvalue().decode("latin-1")
+            selected_file.seek(0)
+            content = selected_file.getvalue().decode("utf-8", errors="replace")
             
             results = analyze_code(content)
             
@@ -221,7 +216,6 @@ else:
                 tabs = ["📊 Dashboard", "📈 Complexity", "📄 Code Viewer", "🌐 Dependencies", "🗺️ Navigation"]
                 tab1, tab2, tab3, tab4, tab5 = st.tabs(tabs)
 
-                # ### FIX: Update all UI elements to use dictionary access (e.g., issue['line']) instead of object access (issue.line) ###
                 with tab1:
                     score = results.get('quality_score', 0)
                     st.header(f"Code Quality Score: {score}/100")
@@ -264,15 +258,16 @@ else:
 
                 with tab3:
                     search_term = st.text_input("Search in code", placeholder="Enter search term to highlight...", key="search_code")
-                    code_with_lines = ""
+                    
+                    lines_with_numbers = []
                     for i, line in enumerate(results["lines"]):
-                        display_line = f"{i+1:4d}: {line}"
+                        display_line = line
                         if search_term and search_term.lower() in line.lower():
-                             escaped_line = line.replace("`", r"\`")
-                             highlighted = re.sub(f'({re.escape(search_term)})', r'**`\1`**', escaped_line, flags=re.IGNORECASE)
-                             code_with_lines += f"{i+1:4d}: {highlighted}\n"
-                        else: code_with_lines += display_line + "\n"
-                    st.code(code_with_lines, language="python", line_numbers=False)
+                            display_line = re.sub(f'({re.escape(search_term)})', r'>>\1<<', line, flags=re.IGNORECASE)
+                        lines_with_numbers.append(f"{i+1:<4d}| {display_line}")
+
+                    full_code_text = "\n".join(lines_with_numbers)
+                    st.code(full_code_text, language="python", line_numbers=False)
                 
                 with tab4:
                     st.subheader("Import Dependency Graph")
